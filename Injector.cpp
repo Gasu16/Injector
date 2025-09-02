@@ -29,30 +29,26 @@ int main(void){
 		return EXIT_FAILURE;
 	}
 	else {
-		printf("OpenProcess succedeed with code: %d\n", GetLastError());
+		printf("\nOpenProcess succedeed with code: %d\n", GetLastError());
 	}
 	
 
 	
 	// Allocate memory in the target process
-	LPVOID remoteMem = VirtualAllocEx(
-	    hProcess,
-	    nullptr,
-	    strlen(buffer)+1,
-	    MEM_COMMIT | MEM_RESERVE,
-	    PAGE_READWRITE
-	);
+	LPVOID remoteMem = VirtualAllocEx(hProcess, nullptr, strlen(buffer)+1, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	
 	if (!remoteMem) {
 		printf("VirtualAllocEx filed. GetLastError = %d\n", GetLastError());
 	    CloseHandle(hProcess);
 	    return 1;
 	} else{
-		printf("Memory allocated with VirtualAllocEx at address: %p\n", remoteMem);
+		printf("\nMemory allocated with VirtualAllocEx at address: %p\n", remoteMem);
 	}
 	
 	
 	printf("\nAllocating %s in process with PID %d\n", buffer, pid);
+	
+	// Write on the target process memory
 	
 	bool wpm = WriteProcessMemory(hProcess, (LPVOID)remoteMem, &buffer, sizeof(int), NULL);
 	
@@ -62,9 +58,22 @@ int main(void){
 		return EXIT_FAILURE;
 	}
 	else {
-		printf("WriteProcessMemory succedeed with code: %d\n", GetLastError());
+		printf("\nWriteProcessMemory succedeed with code: %d\n", GetLastError());
 		system("pause");
 	}
+	
+	// Now let's create the remote thread on the target process memory context
+	
+	HANDLE remoteThread = CreateRemoteThread(hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)remoteMem, NULL, 0, NULL);
+	if(remoteThread == NULL){
+		printf("\nCreateRemoteThread failed. GetLastError = %d\n", GetLastError());
+		system("pause");
+		return EXIT_FAILURE;
+	} else{
+		printf("\nCreateRemoteThread succedeed with code: %d\n", GetLastError());
+		system("pause");
+	}
+	
 	
 	return 0;
 }
